@@ -167,14 +167,23 @@ class CamShiftTracker:
         cv.EllipseBox(frame, target_ellipse, cv.CV_RGB(*TARGET_ELLIPSE_COLOR), 5, cv.CV_AA, 0 )
 
     def draw_points(self, frame):
+        # Draw a circle at each point
         for i in xrange(1, len(self.points)):
             point = self.points[i]
             cv.Circle(frame, (point[0], point[1]), 5, POINT_COLOR, thickness=3)
         
+        # Draw lines between the points
         for i in xrange(1, len(self.points)-1):
             point1 = (int(self.points[i][0]), int(self.points[i][1]))
             point2 = (int(self.points[i+1][0]), int(self.points[i+1][1]))
             cv.Line(frame, point1, point2, POINT_COLOR, thickness=2)
+        
+        # Draw a line between tracker location and first point
+        if (len(self.points) > 1):
+            p = self.points[1]
+            firstPoint = (int(p[0]), int(p[1]))
+            trackerPoint = (int(self.tracker_center_x), int(self.tracker_center_y))
+            cv.Line(frame, trackerPoint, firstPoint, POINT_COLOR, thickness=2)
 
     def update_message(self, track_box):
         self.message['x'] = float(self.tracker_center_x)

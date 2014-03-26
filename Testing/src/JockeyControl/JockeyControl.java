@@ -6,25 +6,16 @@ import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.util.ArrayList;
-
 import javax.swing.BoxLayout;
-import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 
-import referees.OnePlayerReferee;
-import agents.LoneAgent;
-import algorithms.WatkinsSelector;
 import lejos.nxt.*;
-import lejos.util.Delay;
 
 
 public class JockeyControl extends JFrame {
+
+	private static final long serialVersionUID = 1L;
 
 	private enum Mode {
 		Stop, Wait, BangBang, P, PI, PD, PID
