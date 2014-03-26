@@ -40,6 +40,7 @@ class CamShiftTracker:
         self.quit = False
         self.backproject_mode = False
         self.message = {}
+        self.trackerPoint = ()
 
         self.count = 0
 
@@ -55,6 +56,9 @@ class CamShiftTracker:
             self.points.append([x, y])
             self.target_x = x
             self.target_y = y
+            
+            # set the initial tracker location for draw_points
+            self.trackerPoint = (int(self.tracker_center_x), int(self.tracker_center_y))
 
     def left_mouse_click(self, event, x, y):
         if event == cv.CV_EVENT_LBUTTONDOWN:
@@ -178,12 +182,13 @@ class CamShiftTracker:
             point2 = (int(self.points[i+1][0]), int(self.points[i+1][1]))
             cv.Line(frame, point1, point2, POINT_COLOR, thickness=2)
         
-        # Draw a line between tracker location and first point
+        # Draw a line between initial tracker location and first point
+        if (len(self.trackerPoint) > 0):
+            cv.Circle(frame, (self.trackerPoint[0], self.trackerPoint[1]), 5, POINT_COLOR, thickness=3)
         if (len(self.points) > 1):
             p = self.points[1]
             firstPoint = (int(p[0]), int(p[1]))
-            trackerPoint = (int(self.tracker_center_x), int(self.tracker_center_y))
-            cv.Line(frame, trackerPoint, firstPoint, POINT_COLOR, thickness=2)
+            cv.Line(frame, self.trackerPoint, firstPoint, POINT_COLOR, thickness=2)
 
     def update_message(self, track_box):
         self.message['x'] = float(self.tracker_center_x)

@@ -21,37 +21,35 @@ public class ClickAndGo extends JFrame {
 		Stop, Wait, FollowLine
 	}
 
-	private static Mode mode = Mode.Wait;
+	private Mode mode = Mode.Wait;
 
-	static MotorPort leftMotor = MotorPort.C;
-	static MotorPort rightMotor = MotorPort.A;
+	MotorPort leftMotor = MotorPort.C;
+	MotorPort rightMotor = MotorPort.A;
 
-	public static ClickAndGo NXTrc;
+	public TrackerReader tracker;
 
-	public static TrackerReader tracker;
-	
-	public static JLabel modeLbl;
-	public static JLabel commands;
-	public static ButtonHandler bh = new ButtonHandler();
-	
-	private static int kp = 300;
-	private static int ki = 0;
-	private static int kd = 0;
-	
-	private static int speedmult = 1;
-	private static double currentmult = 1.0;
-	
-	private static int offset = 33;
-	private static int targetpower = 10;
-	
-	private static int integral = 0;
-	private static int oldError = 0;
+	public JLabel modeLbl;
+	public JLabel commands;
+	public ButtonHandler bh = new ButtonHandler();
+
+	private int kp = 300;
+	private int ki = 0;
+	private int kd = 200;
+
+	private int targetpower = 10;
+
+	private int integral = 0;
+	private int oldError = 0;
+
+	private Point lineStart;
+	private Point lineEnd;
+	private int pointsIndex = 0;
 
 	public ClickAndGo() {
 		// start the tracker.py interface
 		tracker = new TrackerReader();
-        tracker.start();
-        
+		tracker.start();
+
 		Panel p = new Panel();
 		p.setLayout(new BoxLayout(p, BoxLayout.Y_AXIS));
 
@@ -64,31 +62,25 @@ public class ClickAndGo extends JFrame {
 		modeLbl.setForeground(Color.BLUE);
 		p.add(modeLbl);
 
-		String cmds = "<html>Buttons:<br>" 
-				+ "f: Follow the line" + "<br>"
-				+ "s: Stop<br>" 
-				+ "<br>" 
-				+ "q: Quit</html>";
+		String cmds = "<html>Buttons:<br>" + "f: Follow the line" + "<br>"
+				+ "s: Stop<br>" + "<br>" + "q: Quit</html>";
 
 		commands = new JLabel(cmds);
 		p.add(commands);
-		
-		add(p);
-	}
 
-	public static void main(String[] args) {
-		NXTrc = new ClickAndGo();
-		NXTrc.setVisible(true);
-		NXTrc.requestFocusInWindow();
-		NXTrc.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-		
+		add(p);
+
+		setVisible(true);
+		requestFocusInWindow();
+		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+
 		while (mode != Mode.Stop) {
 			switch (mode) {
-			
+
 			case FollowLine:
 				followLine();
 				break;
-			
+
 			case Wait:
 			default:
 				stahp();
@@ -100,37 +92,113 @@ public class ClickAndGo extends JFrame {
 
 		System.exit(0);
 	}
-	
-	private static void followLine() {
-		// IMPLEMENT P, PI, PD, or PID HERE!
-		
-		/* Idea: Each update perform the P-Whatever for movement, then 
-		 * 			check to see if Jockey is (within a tolerance) at the
-		 * 			target point. If yes, get next point from tracker.points
-		 * 			list and continue
-		 * 
-		 * 	- Will probably need a "start" and "goal" point so a line can be
-		 * 		calculated. That line can give error values for P-Whatever. 
-		 */
-		
-		// Jockey's x, y coordinates
-        double trackerx = tracker.x;
-        double trackery = tracker.y;
-        
+
+	public static void main(String[] args) {
+		ClickAndGo c = new ClickAndGo();
 	}
-	
-	private static void resetValues() {
+
+	private void followLine() {
+		// Jockey's x, y coordinates
+		double trackerx = tracker.x;
+		double trackery = tracker.y;
+		Point pos = new Point(trackerx, trackery);
+
+		// if close enough to the line end, start on next line
+		if (closeToLineEnd(pos)) {
+			System.out.println("Close to lineEnd");
+			pointsIndex++;
+			// if there isn't another line, exit!
+			if (pointsIndex == tracker.points.size())
+			{
+				mode = Mode.Stop;
+				return;
+			} else {
+				// swap to next line in the path!
+				lineStart = lineEnd;
+				lineEnd = tracker.points.get(pointsIndex);
+			}
+		}
+
+		// now do the PID controlled movement
+		doPID(pos);
+	}
+
+	private void doPID(Point pos) {
+		int error = (int) (whichSide(lineStart, lineEnd, pos) * ptToLineDist(
+				lineStart, lineEnd, pos));
+		integral += error;
+		int derivative = error - oldError;
+		int turn = kp * error + ki * integral + kd * derivative;
+		turn /= 100;
+		System.out.println("Error: " + error);
+		driveProportionally(targetpower, turn);
+		oldError = error;
+	}
+
+	private boolean closeToLineEnd(Point pos) {
+		int ptTolerance = 10;
+		if (ptToPtDist(pos, lineEnd) < ptTolerance) 
+			return true;
+		return false;
+	}
+
+	private void driveProportionally(int power, int turn) {
+		int leftpower = power - turn;
+		int rightpower = power + turn;
+		
+		// clamp the power levels to prevent tipping
+		if (leftpower > 15) leftpower = 15;
+		if (leftpower < -15) leftpower = -15;
+		if (rightpower > 15) rightpower = 15;
+		if (rightpower < -15) rightpower = -15;
+		
+		leftMotor.controlMotor(leftpower, BasicMotorPort.FORWARD);
+		rightMotor.controlMotor(rightpower, BasicMotorPort.FORWARD);
+	}
+
+	private void resetValues() {
 		integral = 0;
 		oldError = 0;
 	}
 
+	// Calculate the distance from a point P to a line segment A-B
+	// -> credit: http://www.ahristov.com/tutorial/geometry-games/point-line-distance.html
+	public double ptToLineDist(Point A, Point B, Point P) {
+		double normalLength = Math.sqrt((B.x - A.x) * (B.x - A.x) + (B.y - A.y)
+				* (B.y - A.y));
+		double ret = Math.abs((P.x - A.x) * (B.y - A.y) - (P.y - A.y) * (B.x - A.x))
+				/ normalLength;
+		
+		// get dists from pos P to ends to ensure 
+		double distA = ptToPtDist(A, P);
+		double distB = ptToPtDist(B, P);
+		
+		return Math.min(Math.min(ret, distA), distB);
+	}
+
+	// Calculate distance between two points
+	// -> credit: http://wikicode.wikidot.com/get-distance-between-two-points
+	public static double ptToPtDist(Point p1, Point p2) {
+		double dX = p1.x - p2.x;
+		double dY = p1.y - p2.y;
+		return Math.sqrt(dX * dX + dY * dY);
+	}
+
+	// Calculate which side of a line a point is, -1 is one side and 1 is else
+	// -> credit: modified based on http://stackoverflow.com/a/3461533
+	public int whichSide(Point a, Point b, Point c) {
+		double value = ((b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x));
+
+		return (value < 0) ? -1 : 1;
+	}
+
 	// Stahps.
-	private static void stahp() {
+	private void stahp() {
 		leftMotor.controlMotor(100, BasicMotorPort.STOP);
 		rightMotor.controlMotor(100, BasicMotorPort.STOP);
 	}
 
-	private static class ButtonHandler implements MouseListener, KeyListener {
+	private class ButtonHandler implements MouseListener, KeyListener {
 
 		public void mouseClicked(MouseEvent arg0) {
 		}
@@ -147,10 +215,9 @@ public class ClickAndGo extends JFrame {
 		public void mouseReleased(MouseEvent moe) {
 			// If you click on the window it should remove focus from the text
 			// fields (allowing us to use keyboard commands again)
-			NXTrc.requestFocusInWindow();
+			requestFocusInWindow();
 		}
 
-		// ***********************************************************************
 		// Keyboard action
 		public void keyPressed(KeyEvent ke) {
 			char key = ke.getKeyChar();
@@ -158,21 +225,25 @@ public class ClickAndGo extends JFrame {
 			switch (key) {
 			case 'f':
 				mode = Mode.FollowLine;
+				// if Jockey is close enough to the lineEnd, start next line
+				lineStart = new Point(tracker.x, tracker.y);
+				lineEnd = tracker.points.get(0);
 				break;
 			case 's':
 				mode = Mode.Wait;
 				break;
-
 			case 'q':
 				mode = Mode.Stop;
 				break;
 			}
-			
+
 			resetValues();
 		}
 
-		public void keyTyped(KeyEvent ke) {}
+		public void keyTyped(KeyEvent ke) {
+		}
 
-		public void keyReleased(KeyEvent ke) {}
+		public void keyReleased(KeyEvent ke) {
+		}
 	}
 }
