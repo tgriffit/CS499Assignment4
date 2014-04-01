@@ -1,4 +1,3 @@
-package JockeyControl;
 
 import lejos.nxt.*;
 /**

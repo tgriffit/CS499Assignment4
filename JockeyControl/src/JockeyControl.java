@@ -1,7 +1,4 @@
-package JockeyControl;
-
 import java.awt.BorderLayout;
-import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Panel;
@@ -16,7 +13,6 @@ import javax.swing.JLabel;
 import javax.swing.JTextField;
 
 import lejos.nxt.*;
-import lejos.nxt.addon.GyroSensor;
 import lejos.util.Delay;
 
 
@@ -65,12 +61,6 @@ public class JockeyControl extends JFrame {
 	
 	private static int integral = 0;
 	private static int oldError = 0;
-	
-	private static int heading = 0;
-	private static long oldTime = System.currentTimeMillis();
-	
-	private static boolean foundLine = false;
-	private static boolean leftSide = false;
 
 	public JockeyControl() {
 		setLayout(new FlowLayout());
@@ -144,6 +134,8 @@ public class JockeyControl extends JFrame {
 		setKValues(track);
 		
 		while (mode != Mode.Stop) {
+			
+			//System.out.println(lightSensor.getLightValue());
 			
 			switch (mode) {
 			case BangBang:
@@ -254,10 +246,6 @@ public class JockeyControl extends JFrame {
 		return turn;
 	}
 	
-	private static int getPower(int power) {
-		return power *= currentmult;
-	}
-	
 	private static int clamp(int power) {
 		//power = Math.max(0, power);
 		power = Math.min(100, power);
@@ -308,9 +296,8 @@ public class JockeyControl extends JFrame {
 		integral = 0;
 		oldError = 0;
 		currentmult = 1;
-		foundLine = false;
 		
-		offset = mode == Mode.Project ? 36 : 31;
+		offset = mode == Mode.Project ? 39 : 31;
 	}
 	
 	// Used by bang bang
@@ -322,13 +309,6 @@ public class JockeyControl extends JFrame {
 	private static void driveForwardAndRight(int power, int back) {
 		leftMotor.controlMotor(power, BasicMotorPort.FORWARD);
 		rightMotor.controlMotor(back, BasicMotorPort.BACKWARD);
-	}
-	
-	
-	
-	private static void turnRight(int power) {
-		leftMotor.controlMotor(power, BasicMotorPort.FORWARD);
-		rightMotor.controlMotor(power, BasicMotorPort.BACKWARD);
 	}
 	
 	private static void turnLeft(int power) {
@@ -360,17 +340,17 @@ public class JockeyControl extends JFrame {
 			targetpower = 30;
 			break;
 		case Two:
-			kp = 200;
-			ki = 10;
-			kd = 0;
-			speedmult = 1;
-			targetpower = 10;
+			kp = 600;
+			ki = 100;
+			kd = 200;
+			speedmult = 2;
+			targetpower = 30;
 			break;
 		case Three:
-			kp = 200;
-			ki = 10;
-			kd = 0;
-			speedmult = 1;
+			kp = 600;
+			ki = 20;
+			kd = 100;
+			speedmult = 2;
 			targetpower = 10;
 			break;
 		case Four:
@@ -403,17 +383,6 @@ public class JockeyControl extends JFrame {
 		targetpower = new Integer(targetpowerEntry.getText());
 		backpower = new Integer(backpowerEntry.getText());
 	}
-	
-//	private static void calibrateGyro() {
-//		int total = 0;
-//		int tests = 100;
-//		
-//		for (int i = 0; i < tests; ++i) {
-//			total += gyro.readValue();
-//		}
-//		
-//		gyro.setOffset(total / tests);
-//	}
 
 	// Stahps.
 	private static void stahp() {
@@ -475,7 +444,6 @@ public class JockeyControl extends JFrame {
 				
 			case 'o':
 				mode = Mode.Obstacles;
-				leftSide = false;
 				break;
 				
 			case '1':
