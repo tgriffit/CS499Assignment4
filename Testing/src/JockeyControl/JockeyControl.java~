@@ -10,14 +10,22 @@ import java.awt.event.KeyListener;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import javax.swing.BoxLayout;
+<<<<<<< HEAD
 import javax.swing.JButton;
+=======
+>>>>>>> e46f60684c807c019874e7bbc317402fa7ad1957
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JTextField;
 
+<<<<<<< HEAD
+import weka.core.pmml.DerivedFieldMetaInfo;
 import lejos.nxt.*;
 import lejos.nxt.addon.GyroSensor;
 import lejos.util.Delay;
+=======
+import lejos.nxt.*;
+>>>>>>> e46f60684c807c019874e7bbc317402fa7ad1957
 
 
 public class JockeyControl extends JFrame {
