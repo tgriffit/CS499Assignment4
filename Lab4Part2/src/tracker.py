@@ -2,6 +2,7 @@
 Author: Oscar Ramirez
 Modified camshift tracker from opencv sample and tracker_camshift_planar_robot.py
 from Camilo P.
+Modified by Andrew Neufeld to add ClickAndGo path
 """
 import math
 import json
